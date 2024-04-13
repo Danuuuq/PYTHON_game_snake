@@ -43,7 +43,7 @@ INFO_COLOR = (198, 195, 181)
 START_SPEED = 10
 
 # Настройка игрового окна:
-name = input('Введите своё имя:')
+# name = input('Введите своё имя:')
 screen = pg.display.set_mode(
     (SCREEN_WIDTH, SCREEN_HEIGHT + HEIGHT_INFO), 0, 32)
 screen.fill(BOARD_BACKGROUND_COLOR)
@@ -164,11 +164,11 @@ def game_result(point, speed):
     return point * coefficient
 
 
-def game_over(snake, all_object, score, name):
+def game_over(snake, all_object, score):
     """Функция по описанию конца игры и запись результата"""
 #    write_result(score, snake.speed, name)
     file = open('game_result.txt', 'a')
-    file.write(f'Игрок: {name}, Счет: {score}, Скорость: {snake.speed}\n')
+    file.write(f'Счет: {score}, Скорость: {snake.speed}\n')
     file.close
     snake.reset(DIRECTIONS)
     for object in all_object:
@@ -182,7 +182,7 @@ def draw_text(score, speed):
     pg.font.init()
     f1 = pg.font.Font(None, 35)
     text1 = f1.render(
-        f'Счет:{str(score)} Скорость: {str(speed)} Имя: {name}', 1, TEXT_COLOR)
+        f'Счет:{str(score)} Скорость: {str(speed)}', 1, TEXT_COLOR)
     screen.blit(text1, (20, 485))
 
 
@@ -213,16 +213,16 @@ def main():
         elif snake.get_head_position() == mushroom.position:
             snake.length -= 1
             if snake.length == 0:
-                game_over(snake, all_object, score, name)
+                game_over(snake, all_object, score)
                 continue
             snake.positions.pop(-1)
             mushroom.position = mushroom.randomize_position()
             score += game_result(-10, snake.speed)
         elif snake.get_head_position() == stone.position:
-            score = game_over(snake, all_object, score, name)
+            score = game_over(snake, all_object, score)
         # Змейка съела саму себя
         elif snake.get_head_position() in snake.positions[1:]:
-            score = game_over(snake, all_object, score, name)
+            score = game_over(snake, all_object, score)
         pg.display.update()
 
 
