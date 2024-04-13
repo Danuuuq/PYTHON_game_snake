@@ -43,6 +43,7 @@ INFO_COLOR = (198, 195, 181)
 START_SPEED = 10
 
 # Настройка игрового окна:
+name = input('Введите своё имя:')
 screen = pg.display.set_mode(
     (SCREEN_WIDTH, SCREEN_HEIGHT + HEIGHT_INFO), 0, 32)
 screen.fill(BOARD_BACKGROUND_COLOR)
@@ -181,14 +182,13 @@ def draw_text(score, speed):
     pg.font.init()
     f1 = pg.font.Font(None, 35)
     text1 = f1.render(
-        f'Счет:{str(score)} Скорость: {str(speed)}', True, TEXT_COLOR)
+        f'Счет:{str(score)} Скорость: {str(speed)} Имя: {name}', 1, TEXT_COLOR)
     screen.blit(text1, (20, 485))
 
 
 def main():
     """Игровой процесс"""
     score = 0
-    name = 'Player'
     apple = Apple(APPLE_COLOR)
     mushroom = Apple(MUSHROOM_COLOR)
     stone = Apple(STONE_COLOR)
