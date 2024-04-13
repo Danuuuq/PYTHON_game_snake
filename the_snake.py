@@ -10,6 +10,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+HEIGHT_INFO = 30
 LINE_SIZE = 1
 START = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
@@ -26,17 +27,24 @@ BOARD_BACKGROUND_COLOR = (0, 0, 0)
 # Цвет границы ячейки
 BORDER_COLOR = (93, 216, 228)
 
-# Цвет яблока
+# Цвета еды и препятствий:
 APPLE_COLOR = (255, 0, 0)
+MUSHROOM_COLOR = (0, 0, 255)
+STONE_COLOR = (128, 128, 128)
 
 # Цвет змейки
 SNAKE_COLOR = (0, 255, 0)
 
+# Цвет текста
+TEXT_COLOR = (255, 255, 255)
+INFO_COLOR = (198, 195, 181)
+
 # Скорость движения змейки:
-SPEED = 20
+START_SPEED = 10
 
 # Настройка игрового окна:
-screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+screen = pg.display.set_mode(
+    (SCREEN_WIDTH, SCREEN_HEIGHT + HEIGHT_INFO), 0, 32)
 screen.fill(BOARD_BACKGROUND_COLOR)
 pg.display.set_caption('Змейка')
 
@@ -57,16 +65,21 @@ class GameObject:
 
 
 class Apple(GameObject):
-    """Класс Apple описывает экземпляры еды для змейки"""
+    """Класс Apple описывает экземпляры дополнительных объектов для змейки"""
 
-    def __init__(self, body_color):
+    def __init__(self, body_color=BORDER_COLOR):
         super().__init__(body_color)
         self.position = self.randomize_position()
 
     def randomize_position(self):
         """Задает случайное место появления еды"""
-        return (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
-                randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
+        position_not_free = True
+        while position_not_free:
+            pos_x = randint(0, GRID_WIDTH - 1) * GRID_SIZE
+            pos_y = randint(0, GRID_HEIGHT - 1) * GRID_SIZE
+            if screen.get_at((pos_x, pos_y)) == BOARD_BACKGROUND_COLOR:
+                position_not_free = False
+        return (pos_x, pos_y)
 
     def draw(self):
         """Отрисовка экземпляров еды"""
@@ -74,11 +87,16 @@ class Apple(GameObject):
         pg.draw.rect(screen, self.body_color, rect)
         pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
+    def reset(*args):
+        """Метод для новых позиций еды и препятствий"""
+        for object in args:
+            object.position = object.randomize_position()
+
 
 class Snake(GameObject):
     """Класс Snake описывает экземпляр змеи, её отрибутов и методов"""
 
-    def __init__(self, body_color, position=START):
+    def __init__(self, body_color=SNAKE_COLOR, position=START):
         super().__init__(body_color, position)
         self.reset([RIGHT])
         self.last = self.positions[-1]
@@ -92,7 +110,7 @@ class Snake(GameObject):
             pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
     def move(self):
-        """Метод экземпляра для выпонления движения"""
+        """Метод экземпляра описания движения змейки"""
         head_x, head_y = self.get_head_position()
         for move in (RIGHT, LEFT, UP, DOWN):
             if move == self.direction:
@@ -119,6 +137,7 @@ class Snake(GameObject):
         self.direction = choice(direction)
         self.next_direction = None
         self.length = 1
+        self.speed = START_SPEED
 
 
 def handle_keys(game_object):
@@ -138,34 +157,72 @@ def handle_keys(game_object):
                 game_object.next_direction = RIGHT
 
 
+def game_result(point, speed):
+    """Функция изменения счета игры"""
+    coefficient = 1 + (speed - 10)
+    return point * coefficient
+
+
+def game_over(snake, all_object, score, name):
+    """Функция по описанию конца игры и запись результата"""
+#    write_result(score, snake.speed, name)
+    file = open('game_result.txt', 'a')
+    file.write(f'Игрок: {name}, Счет: {score}, Скорость: {snake.speed}\n')
+    file.close
+    snake.reset(DIRECTIONS)
+    for object in all_object:
+        object.reset()
+    return 0
+
+
+def draw_text(score, speed):
+    """Вывод счета на экран"""
+    pg.draw.line(screen, INFO_COLOR, (0, 495), (640, 495), 30)
+    pg.font.init()
+    f1 = pg.font.Font(None, 35)
+    text1 = f1.render(
+        f'Счет:{str(score)} Скорость: {str(speed)}', True, TEXT_COLOR)
+    screen.blit(text1, (20, 485))
+
+
 def main():
     """Игровой процесс"""
+    score = 0
+    name = 'Player'
     apple = Apple(APPLE_COLOR)
+    mushroom = Apple(MUSHROOM_COLOR)
+    stone = Apple(STONE_COLOR)
     snake = Snake(SNAKE_COLOR)
-
+    all_object = (apple, mushroom, stone)
     while True:
-        clock.tick(10)
-
+        clock.tick(snake.speed)
         handle_keys(snake)
         snake.update_direction()
         snake.move()
         snake.draw()
-        apple.draw()
-        # Змейка съела яблоко.
+        draw_text(score, snake.speed)
+        for object in all_object:
+            object.draw()
+        # Змейка съела яблоко, увеличение скорости после 70 яблок.
         if snake.get_head_position() == apple.position:
             snake.length += 1
             apple.position = apple.randomize_position()
-            check_position = True
-            while check_position:
-                if apple.position not in snake.positions:
-                    check_position = False
-                else:
-                    apple.position = apple.randomize_position()
-                    continue
+            if snake.length % 70 == 0:
+                snake.speed += 1
+            score += game_result(10, snake.speed)
+        elif snake.get_head_position() == mushroom.position:
+            snake.length -= 1
+            if snake.length == 0:
+                game_over(snake, all_object, score, name)
+                continue
+            snake.positions.pop(-1)
+            mushroom.position = mushroom.randomize_position()
+            score += game_result(-10, snake.speed)
+        elif snake.get_head_position() == stone.position:
+            score = game_over(snake, all_object, score, name)
         # Змейка съела саму себя
-        if snake.get_head_position() in snake.positions[1:]:
-            snake.reset(DIRECTIONS)
-
+        elif snake.get_head_position() in snake.positions[1:]:
+            score = game_over(snake, all_object, score, name)
         pg.display.update()
 
 
