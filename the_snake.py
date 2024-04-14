@@ -39,11 +39,11 @@ SNAKE_COLOR = (0, 255, 0)
 TEXT_COLOR = (255, 255, 255)
 INFO_COLOR = (198, 195, 181)
 
-# Скорость движения змейки:
+# Скорость движения змейки и условия повышения скорости:
 START_SPEED = 10
+LEVEL_UP = 70
 
 # Настройка игрового окна:
-# name = input('Введите своё имя:')
 screen = pg.display.set_mode(
     (SCREEN_WIDTH, SCREEN_HEIGHT + HEIGHT_INFO), 0, 32)
 screen.fill(BOARD_BACKGROUND_COLOR)
@@ -63,6 +63,11 @@ class GameObject:
     def draw(self):
         """Абстрактный метод для переназначения в дочерних классах"""
         pass
+
+    def draw_cell(self, rect):
+        """Метод отрисовки игровых объектов"""
+        pg.draw.rect(screen, self.body_color, rect)
+        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
 
 class Apple(GameObject):
@@ -85,8 +90,7 @@ class Apple(GameObject):
     def draw(self):
         """Отрисовка экземпляров еды"""
         rect = pg.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, self.body_color, rect)
-        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+        self.draw_cell(rect)
 
     def reset(*args):
         """Метод для новых позиций еды и препятствий"""
@@ -107,20 +111,17 @@ class Snake(GameObject):
         screen.fill(BOARD_BACKGROUND_COLOR)
         for position in self.positions:
             rect = (pg.Rect(position, (GRID_SIZE, GRID_SIZE)))
-            pg.draw.rect(screen, self.body_color, rect)
-            pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+            self.draw_cell(rect)
 
     def move(self):
         """Метод экземпляра описания движения змейки"""
         head_x, head_y = self.get_head_position()
-        for move in (RIGHT, LEFT, UP, DOWN):
-            if move == self.direction:
-                m_x, m_y = move
-                head_x = (head_x + m_x * GRID_SIZE) % SCREEN_WIDTH
-                head_y = (head_y + m_y * GRID_SIZE) % SCREEN_HEIGHT
+        m_x, m_y = self.direction
+        head_x = (head_x + m_x * GRID_SIZE) % SCREEN_WIDTH
+        head_y = (head_y + m_y * GRID_SIZE) % SCREEN_HEIGHT
         self.positions.insert(0, (head_x, head_y))
         if len(self.positions) > self.length:
-            self.positions.pop(-1)
+            self.positions.pop()
 
     def get_head_position(self):
         """Метод возвращает положения головы"""
@@ -139,6 +140,15 @@ class Snake(GameObject):
         self.next_direction = None
         self.length = 1
         self.speed = START_SPEED
+
+
+def quit():
+    """Функция выхода из игры"""
+    for event in pg.event.get():
+        if event.type == pg.QUIT or (event.type == pg.KEYDOWN
+                                     and event.key == pg.K_ESCAPE):
+            pg.quit()
+            raise SystemExit
 
 
 def handle_keys(game_object):
@@ -166,7 +176,6 @@ def game_result(point, speed):
 
 def game_over(snake, all_object, score):
     """Функция по описанию конца игры и запись результата"""
-#    write_result(score, snake.speed, name)
     file = open('game_result.txt', 'a')
     file.write(f'Счет: {score}, Скорость: {snake.speed}\n')
     file.close
@@ -207,7 +216,7 @@ def main():
         if snake.get_head_position() == apple.position:
             snake.length += 1
             apple.position = apple.randomize_position()
-            if snake.length % 70 == 0:
+            if snake.length % LEVEL_UP == 0:
                 snake.speed += 1
             score += game_result(10, snake.speed)
         elif snake.get_head_position() == mushroom.position:
@@ -215,7 +224,7 @@ def main():
             if snake.length == 0:
                 game_over(snake, all_object, score)
                 continue
-            snake.positions.pop(-1)
+            snake.positions.pop()
             mushroom.position = mushroom.randomize_position()
             score += game_result(-10, snake.speed)
         elif snake.get_head_position() == stone.position:
