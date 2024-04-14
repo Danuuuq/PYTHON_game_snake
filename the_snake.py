@@ -142,15 +142,6 @@ class Snake(GameObject):
         self.speed = START_SPEED
 
 
-def quit():
-    """Функция выхода из игры"""
-    for event in pg.event.get():
-        if event.type == pg.QUIT or (event.type == pg.KEYDOWN
-                                     and event.key == pg.K_ESCAPE):
-            pg.quit()
-            raise SystemExit
-
-
 def handle_keys(game_object):
     """Функция выполнения действий при нажатии"""
     for event in pg.event.get():
